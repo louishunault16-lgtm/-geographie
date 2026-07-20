@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+  <title>Place le pays !</title>
+
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        crossorigin="" />
+
+  <style>
+    :root {
+      --panel: rgba(255, 255, 255, 0.96);
+      --text: #172033;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --success: #15803d;
+      --danger: #b91c1c;
+      --border: #dbe2ea;
+      --shadow: 0 8px 26px rgba(15, 23, 42, 0.16);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: #dbeafe;
+      overscroll-behavior: none;
+    }
+
+    button {
+      font: inherit;
+      touch-action: manipulation;
+    }
+
+    #map {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      z-index: 1;
+    }
+
+    .top-panel {
+      position: fixed;
+      top: calc(10px + env(safe-area-inset-top));
+      left: 10px;
+      right: 10px;
+      z-index: 1000;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border: 1px solid rgba(219, 226, 234, 0.9);
+      border-radius: 16px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .country-label {
+      min-width: 0;
+    }
+
+    .small-label {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    #countryName {
+      display: block;
+      overflow: hidden;
+      font-size: clamp(1.18rem, 5vw, 1.65rem);
+      font-weight: 800;
+      line-height: 1.12;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .score-box {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      text-align: center;
+    }
+
+    .score-box div {
+      min-width: 48px;
+    }
+
+    .score-box strong {
+      display: block;
+      font-size: 1rem;
+      line-height: 1.1;
+    }
+
+    .bottom-panel {
+      position: fixed;
+      left: 10px;
+      right: 10px;
+      bottom: calc(10px + env(safe-area-inset-bottom));
+      z-index: 1000;
+      padding: 12px;
+      border: 1px solid rgba(219, 226, 234, 0.9);
+      border-radius: 18px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    #message {
+      min-height: 44px;
+      margin-bottom: 10px;
+      font-size: 0.93rem;
+      line-height: 1.35;
+    }
+
+    #message.success {
+      color: var(--success);
+    }
+
+    #message.error {
+      color: var(--danger);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 9px;
+    }
+
+    button {
+      min-height: 48px;
+      border: 0;
+      border-radius: 13px;
+      padding: 11px 15px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    #nextButton {
+      background: var(--accent);
+      color: white;
+    }
+
+    #restartButton {
+      width: 48px;
+      padding: 0;
+      background: #e8eefc;
+      color: #1e3a8a;
+      font-size: 1.25rem;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    .leaflet-control-zoom {
+      margin-top: calc(96px + env(safe-area-inset-top)) !important;
+    }
+
+    .leaflet-control-attribution {
+      max-width: 65vw;
+      font-size: 9px !important;
+    }
+
+    .leaflet-popup-content {
+      margin: 10px 12px;
+      font-size: 0.9rem;
+    }
+
+    @media (min-width: 760px) {
+      .top-panel {
+        right: auto;
+        width: 430px;
+      }
+
+      .bottom-panel {
+        left: 10px;
+        right: auto;
+        width: 430px;
+      }
+    }
+
+    @media (max-height: 580px) and (orientation: landscape) {
+      .top-panel {
+        top: calc(6px + env(safe-area-inset-top));
+        left: 6px;
+        right: auto;
+        width: 390px;
+        padding: 8px 11px;
+      }
+
+      .bottom-panel {
+        left: 6px;
+        right: auto;
+        bottom: calc(6px + env(safe-area-inset-bottom));
+        width: 390px;
+        padding: 9px;
+      }
+
+      #message {
+        min-height: 24px;
+        margin-bottom: 7px;
+        font-size: 0.82rem;
+      }
+
+      button {
+        min-height: 42px;
+      }
+
+      .leaflet-control-zoom {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="map" aria-label="Carte du monde interactive"></div>
+
+  <header class="top-panel">
+    <div class="country-label">
+      <span class="small-label">Pays à placer</span>
+      <strong id="countryName">Chargement…</strong>
+    </div>
+
+    <div class="score-box">
+      <div>
+        <span class="small-label">Score</span>
+        <strong id="score">0</strong>
+      </div>
+      <div>
+        <span class="small-label">Manche</span>
+        <strong><span id="round">1</span>/10</strong>
+      </div>
+    </div>
+  </header>
+
+  <section class="bottom-panel">
+    <div id="message">Touchez la carte pour placer le pays.</div>
+
+    <div class="actions">
+      <button id="nextButton" disabled>Pays suivant</button>
+      <button id="restartButton" aria-label="Recommencer" title="Recommencer">↻</button>
+    </div>
+  </section>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          crossorigin=""></script>
+
+  <script>
+    const countries = [
+      { name: "France", lat: 46.2276, lng: 2.2137 },
+      { name: "Espagne", lat: 40.4637, lng: -3.7492 },
+      { name: "Italie", lat: 41.8719, lng: 12.5674 },
+      { name: "Portugal", lat: 39.3999, lng: -8.2245 },
+      { name: "Allemagne", lat: 51.1657, lng: 10.4515 },
+      { name: "Royaume-Uni", lat: 55.3781, lng: -3.4360 },
+      { name: "Norvège", lat: 60.4720, lng: 8.4689 },
+      { name: "Suède", lat: 60.1282, lng: 18.6435 },
+      { name: "Pologne", lat: 51.9194, lng: 19.1451 },
+      { name: "Grèce", lat: 39.0742, lng: 21.8243 },
+      { name: "Maroc", lat: 31.7917, lng: -7.0926 },
+      { name: "Algérie", lat: 28.0339, lng: 1.6596 },
+      { name: "Égypte", lat: 26.8206, lng: 30.8025 },
+      { name: "Afrique du Sud", lat: -30.5595, lng: 22.9375 },
+      { name: "Nigeria", lat: 9.0820, lng: 8.6753 },
+      { name: "Kenya", lat: -0.0236, lng: 37.9062 },
+      { name: "Madagascar", lat: -18.7669, lng: 46.8691 },
+      { name: "Canada", lat: 56.1304, lng: -106.3468 },
+      { name: "États-Unis", lat: 37.0902, lng: -95.7129 },
+      { name: "Mexique", lat: 23.6345, lng: -102.5528 },
+      { name: "Brésil", lat: -14.2350, lng: -51.9253 },
+      { name: "Argentine", lat: -38.4161, lng: -63.6167 },
+      { name: "Chili", lat: -35.6751, lng: -71.5430 },
+      { name: "Pérou", lat: -9.1900, lng: -75.0152 },
+      { name: "Colombie", lat: 4.5709, lng: -74.2973 },
+      { name: "Russie", lat: 61.5240, lng: 105.3188 },
+      { name: "Chine", lat: 35.8617, lng: 104.1954 },
+      { name: "Inde", lat: 20.5937, lng: 78.9629 },
+      { name: "Japon", lat: 36.2048, lng: 138.2529 },
+      { name: "Corée du Sud", lat: 35.9078, lng: 127.7669 },
+      { name: "Indonésie", lat: -0.7893, lng: 113.9213 },
+      { name: "Australie", lat: -25.2744, lng: 133.7751 },
+      { name: "Nouvelle-Zélande", lat: -40.9006, lng: 174.8860 },
+      { name: "Arabie saoudite", lat: 23.8859, lng: 45.0792 },
+      { name: "Turquie", lat: 38.9637, lng: 35.2433 }
+    ];
+
+    const map = L.map("map", {
+      worldCopyJump: true,
+      minZoom: 2,
+      zoomControl: true,
+      tap: true,
+      inertia: true
+    }).setView([22, 10], 2);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 8,
+      attribution: "&copy; OpenStreetMap"
+    }).addTo(map);
+
+    const countryNameEl = document.getElementById("countryName");
+    const scoreEl = document.getElementById("score");
+    const roundEl = document.getElementById("round");
+    const messageEl = document.getElementById("message");
+    const nextButton = document.getElementById("nextButton");
+    const restartButton = document.getElementById("restartButton");
+
+    let gameCountries = [];
+    let currentCountry = null;
+    let currentRound = 1;
+    let totalScore = 0;
+    let hasAnswered = false;
+    let guessMarker = null;
+    let answerMarker = null;
+    let answerLine = null;
+
+    function shuffle(array) {
+      const copy = [...array];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function clearMapResults() {
+      [guessMarker, answerMarker, answerLine].forEach(layer => {
+        if (layer) map.removeLayer(layer);
+      });
+
+      guessMarker = null;
+      answerMarker = null;
+      answerLine = null;
+    }
+
+    function loadRound() {
+      clearMapResults();
+      hasAnswered = false;
+      currentCountry = gameCountries[currentRound - 1];
+      countryNameEl.textContent = currentCountry.name;
+      roundEl.textContent = currentRound;
+      messageEl.className = "";
+      messageEl.textContent = "Touchez la carte pour placer le pays.";
+      nextButton.disabled = true;
+      nextButton.textContent = currentRound === 10 ? "Résultat final" : "Pays suivant";
+    }
+
+    function startGame() {
+      gameCountries = shuffle(countries).slice(0, 10);
+      currentRound = 1;
+      totalScore = 0;
+      scoreEl.textContent = "0";
+      map.setView([22, 10], 2, { animate: false });
+      loadRound();
+      setTimeout(() => map.invalidateSize(), 100);
+    }
+
+    function distanceKm(lat1, lon1, lat2, lon2) {
+      const radius = 6371;
+      const toRad = value => value * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) *
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) ** 2;
+
+      return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function calculateScore(distance) {
+      return Math.max(0, Math.round(1000 * Math.exp(-distance / 1800)));
+    }
+
+    function getQuality(distance) {
+      if (distance < 300) return "Excellent !";
+      if (distance < 800) return "Très bien !";
+      if (distance < 1800) return "Pas mal.";
+      if (distance < 3500) return "Assez loin.";
+      return "Très loin.";
+    }
+
+    function getFinalComment(score) {
+      if (score >= 8500) return "Niveau expert en géographie.";
+      if (score >= 7000) return "Très bon niveau.";
+      if (score >= 5000) return "Bonnes bases, continuez.";
+      if (score >= 3000) return "Encore quelques parties et cela viendra.";
+      return "Une nouvelle partie vous fera rapidement progresser.";
+    }
+
+    map.on("click", event => {
+      if (hasAnswered || !currentCountry) return;
+
+      hasAnswered = true;
+
+      const guess = event.latlng;
+      const answer = L.latLng(currentCountry.lat, currentCountry.lng);
+      const distance = distanceKm(guess.lat, guess.lng, answer.lat, answer.lng);
+      const roundScore = calculateScore(distance);
+
+      totalScore += roundScore;
+      scoreEl.textContent = totalScore.toLocaleString("fr-FR");
+
+      guessMarker = L.circleMarker(guess, {
+        radius: 9,
+        weight: 3,
+        fillOpacity: 0.9
+      }).addTo(map).bindPopup("Votre réponse");
+
+      answerMarker = L.circleMarker(answer, {
+        radius: 9,
+        weight: 3,
+        fillOpacity: 0.9
+      }).addTo(map).bindPopup(currentCountry.name);
+
+      answerLine = L.polyline([guess, answer], {
+        weight: 3,
+        dashArray: "7, 8"
+      }).addTo(map);
+
+      map.fitBounds(L.latLngBounds([guess, answer]), {
+        paddingTopLeft: [35, 120],
+        paddingBottomRight: [35, 150],
+        maxZoom: 5,
+        animate: true
+      });
+
+      messageEl.className = distance < 800 ? "success" : "error";
+      messageEl.innerHTML =
+        "<strong>" + getQuality(distance) + "</strong> " +
+        Math.round(distance).toLocaleString("fr-FR") + " km d'écart — " +
+        roundScore.toLocaleString("fr-FR") + " points.";
+
+      nextButton.disabled = false;
+
+      if (navigator.vibrate) {
+        navigator.vibrate(distance < 800 ? 40 : [35, 35, 35]);
+      }
+    });
+
+    nextButton.addEventListener("click", () => {
+      if (!hasAnswered) return;
+
+      if (currentRound < 10) {
+        currentRound++;
+        map.setView([22, 10], 2);
+        loadRound();
+      } else {
+        clearMapResults();
+        countryNameEl.textContent = "Partie terminée";
+        messageEl.className = "success";
+        messageEl.innerHTML =
+          "<strong>Score final : " +
+          totalScore.toLocaleString("fr-FR") +
+          " / 10 000.</strong> " +
+          getFinalComment(totalScore);
+
+        nextButton.disabled = true;
+      }
+    });
+
+    restartButton.addEventListener("click", startGame);
+
+    window.addEventListener("orientationchange", () => {
+      setTimeout(() => map.invalidateSize(), 250);
+    });
+
+    window.addEventListener("resize", () => {
+      map.invalidateSize();
+    });
+
+    startGame();
+  </script>
+</body>
+</html>
